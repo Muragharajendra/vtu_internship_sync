@@ -31,4 +31,4 @@ WORKDIR /app/api
 EXPOSE 8000
 
 # Start Uvicorn Server using script
-CMD ["./start.sh"]
+CMD ["bash", "start.sh"]
