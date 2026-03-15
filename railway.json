@@ -5,7 +5,7 @@
         "dockerfilePath": "Dockerfile.api"
     },
     "deploy": {
-        "startCommand": "bash -c 'uvicorn api.main:app --host 0.0.0.0 --port ${PORT:-8000}'",
+        "startCommand": "bash -c 'cd api && uvicorn main:app --host 0.0.0.0 --port ${PORT:-8000}'",
         "restartPolicyType": "ON_FAILURE"
     }
 }
