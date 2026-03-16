@@ -7,8 +7,7 @@ RUN npm install
 
 COPY . .
 
-# We need to set the API url for production
-ENV VITE_API_URL=http://localhost:8000
+# The build can use VITE_API_URL from the environment (set in Railway / Vercel)
 RUN npm run build
 
 FROM nginx:alpine
