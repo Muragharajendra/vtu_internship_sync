@@ -42,7 +42,13 @@ def register(user: schemas.UserCreate, db: Session = Depends(get_db)):
     db_user = db.query(models.User).filter(models.User.email == user.email).first()
     if db_user:
         raise HTTPException(status_code=400, detail="Email already registered")
-    
+
+    # Password validation
+    if not user.password or len(user.password) < 8:
+        raise HTTPException(status_code=400, detail="Password must be at least 8 characters.")
+    if len(user.password.encode()) > 72:
+        raise HTTPException(status_code=400, detail="Password cannot be longer than 72 bytes.")
+
     hashed_password = auth.get_password_hash(user.password)
     new_user = models.User(email=user.email, hashed_password=hashed_password, entries_remaining=0)
     db.add(new_user)
