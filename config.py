@@ -34,6 +34,11 @@ LOGIN_URL_A2 = "https://vtu.internyet.in/sign-in"
 DIARY_CREATE_URL = "https://vtu.internyet.in/dashboard/student/student-diary"
 DIARY_VIEW_URL = "https://vtu.internyet.in/dashboard/student/diary-entries"
 
+# Sync behavior
+# When True, the sync will attempt to submit entries even if the date already exists in Account-1.
+# This helps overwrite/refresh existing diary entries rather than only adding missing dates.
+SYNC_OVERWRITE = os.getenv("SYNC_OVERWRITE", "true").lower() in ("1", "true", "yes")
+
 # Generic / Login Selectors
 SEL_USERNAME_INPUT = "input[placeholder='Enter your email address']"
 SEL_PASSWORD_INPUT = "input#password"

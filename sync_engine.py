@@ -22,20 +22,31 @@ def filter_by_date(entries, cutoff_date="2026-02-03"):
             logger.warning(f"Could not parse date {e['date']} for filtering: {exc}")
     return filtered
 
-def compute_missing_entries(entries_a2, entries_a1):
+def compute_missing_entries(entries_a2, entries_a1, overwrite=False):
+    """Compute which entries should be submitted.
+
+    If `overwrite` is False (default), only dates missing from Account-1 are returned.
+    If `overwrite` is True, all entries from Account-2 will be returned (after date filtering), allowing the script to overwrite existing records.
+    """
     dates_a1 = {entry['date'] for entry in entries_a1}
-    missing = [entry for entry in entries_a2 if entry['date'] not in dates_a1]
-    
+
+    if overwrite:
+        entries_to_sync = list(entries_a2)
+        logger.info("Overwrite enabled: will submit all entries from source (Account-2) regardless of existing dates in target.")
+    else:
+        entries_to_sync = [entry for entry in entries_a2 if entry['date'] not in dates_a1]
+
     logger.info(f"Total entries in source (A2): {len(entries_a2)}")
     logger.info(f"Total entries in target (A1): {len(entries_a1)}")
-    logger.info(f"Missing entries to sync: {len(missing)}")
-    
-    # Sort them chronically (oldest first) so they log correctly
-    missing.sort(key=lambda x: x['date'])
-    return missing
+    logger.info(f"Entries to sync: {len(entries_to_sync)}")
+
+    # Sort chronologically (oldest first)
+    entries_to_sync.sort(key=lambda x: x['date'])
+    return entries_to_sync
 
 def run_sync(headless=False, dry_run=False, resume=False, start_date_filter="2026-02-03"):
-    from config import ACCOUNT1_USER, ACCOUNT1_PASS, ACCOUNT2_USER, ACCOUNT2_PASS, LOGIN_URL_A1, LOGIN_URL_A2
+    from config import ACCOUNT1_USER, ACCOUNT1_PASS, ACCOUNT2_USER, ACCOUNT2_PASS, LOGIN_URL_A1, LOGIN_URL_A2, SYNC_OVERWRITE
+    overwrite_config = SYNC_OVERWRITE
 
     if not all([ACCOUNT1_USER, ACCOUNT1_PASS, ACCOUNT2_USER, ACCOUNT2_PASS]):
         logger.error("Missing credentials in .env. Exiting.")
@@ -57,7 +68,7 @@ def run_sync(headless=False, dry_run=False, resume=False, start_date_filter="202
         entries_a1 = scrape_account_entries(driver_a1, save_to_disk=False)
 
         entries_a2_filtered = filter_by_date(entries_a2, cutoff_date=start_date_filter)
-        missing_entries = compute_missing_entries(entries_a2_filtered, entries_a1)
+        missing_entries = compute_missing_entries(entries_a2_filtered, entries_a1, overwrite_config)
 
         if resume:
             failed_dates = get_failed_entries_from_checkpoint()
