@@ -30,6 +30,11 @@ pip install -r requirements.txt
 cp .env.example .env
 ```
 Open `.env` and fill in the necessary `ACCOUNT1_*` and `ACCOUNT2_*` fields.
+
+- If you want to enable **Razorpay checkout** in the web UI, also set:
+  - `RAZORPAY_KEY_ID`
+  - `RAZORPAY_KEY_SECRET`
+
 If using AI fallbacks, fill the appropriate `OPENAI_API_KEY` or `ANTHROPIC_API_KEY`.
 
 ## Usage
