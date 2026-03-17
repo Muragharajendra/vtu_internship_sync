@@ -9,11 +9,11 @@ import time
 from authlib.integrations.starlette_client import OAuth, OAuthError
 import razorpay
 
-from .database import engine, Base, get_db
-from . import models
-from . import schemas
-from . import auth
-from .sync_runner import start_sync_background
+from api.database import engine, Base, get_db
+from api import models
+from api import schemas
+from api import auth
+from api.sync_runner import start_sync_background
 
 
 Base.metadata.create_all(bind=engine)

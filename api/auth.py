@@ -14,8 +14,8 @@ pwd_context = None
 from sqlalchemy.orm import Session
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
-import database
-import models
+from api import database
+from api import models
 
 SECRET_KEY = "SUPER_SECRET_VTU_KEY_CHANGE_IN_PRODUCTION"
 ALGORITHM = "HS256"
