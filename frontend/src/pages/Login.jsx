@@ -34,7 +34,7 @@ export default function Login() {
                         <LogIn size={32} color="var(--primary)" />
                     </div>
                     <h2>Welcome Back</h2>
-                    <p>Login to your VTU Sync dashboard</p>
+                    <p>Login to your OneTouch dashboard</p>
                 </div>
 
                 <form onSubmit={handleLogin}>

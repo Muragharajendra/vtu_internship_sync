@@ -107,7 +107,7 @@ export default function Billing() {
                     key: res.data.key_id,
                     amount: Math.round(finalPrice * 100),
                     currency: res.data.currency || 'INR',
-                    name: 'VTU Auto Sync',
+                    name: 'OneTouch',
                     description: `Payment for ${planId}`,
                     order_id: res.data.order_id,
                     handler: (response) => {
@@ -166,15 +166,15 @@ export default function Billing() {
 
     // Generate UPI URI
     const upiId = "muragharajendra@oksbi";
-    const upiName = "VTU Sync Automator";
-    const upiUri = `upi://pay?pa=${upiId}&pn=${encodeURIComponent(upiName)}&am=${paymentAmount}&cu=INR&tn=${encodeURIComponent(`VTU Sync Plan ${selectedPlanId}`)}`;
+    const upiName = "OneTouch";
+    const upiUri = `upi://pay?pa=${upiId}&pn=${encodeURIComponent(upiName)}&am=${paymentAmount}&cu=INR&tn=${encodeURIComponent(`OneTouch Plan ${selectedPlanId}`)}`;
 
     return (
         <div className="app-container">
             <nav className="navbar">
                 <div className="nav-brand">
                     <Activity size={24} color="var(--primary)" />
-                    VTU Automator
+                    OneTouch
                 </div>
                 <div className="nav-links">
                     <Link to="/dashboard" className={location.pathname === '/dashboard' ? 'active-nav' : 'text-muted'}>Dashboard</Link>

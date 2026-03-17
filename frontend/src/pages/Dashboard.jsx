@@ -72,7 +72,7 @@ export default function Dashboard() {
             <nav className="navbar">
                 <div className="nav-brand">
                     <Activity size={24} color="var(--primary)" />
-                    VTU Automator
+                    OneTouch
                 </div>
                 <div className="nav-links">
                     <Link to="/dashboard" className={location.pathname === '/dashboard' ? 'active-nav' : 'text-muted'}>Dashboard</Link>
@@ -88,7 +88,7 @@ export default function Dashboard() {
                 <div className="mb-6" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
                     <div>
                         <h2>Dashboard Overview</h2>
-                        <p>Configure mapping and automate your VTU internship diary</p>
+                        <p>Configure mapping and automate your internship diary</p>
                     </div>
                     <div className="card stat-card" style={{ padding: '1rem 2rem', border: '1px solid var(--border-color)', background: 'var(--card-bg)', minWidth: '200px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                         <h4 style={{ color: 'var(--text-muted)', fontSize: '0.875rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Entries Available</h4>
@@ -118,7 +118,7 @@ export default function Dashboard() {
                                 <h4 style={{ margin: 0 }}>Source Account (Copy From)</h4>
                             </div>
                             <div className="form-group mb-4">
-                                <label className="form-label text-muted">VTU Portal Email</label>
+                                <label className="form-label text-muted">Portal Email</label>
                                 <input type="email" className="form-input" value={sourceEmail} onChange={(e) => setSourceEmail(e.target.value)} placeholder="student-1@vtu.ac.in" />
                             </div>
                             <div className="form-group mb-0">
@@ -133,7 +133,7 @@ export default function Dashboard() {
                                 <h4 style={{ margin: 0 }}>Target Account (Paste To)</h4>
                             </div>
                             <div className="form-group mb-4">
-                                <label className="form-label text-muted">VTU Portal Email</label>
+                                <label className="form-label text-muted">Portal Email</label>
                                 <input type="email" className="form-input" value={destEmail} onChange={(e) => setDestEmail(e.target.value)} placeholder="student-2@vtu.ac.in" />
                             </div>
                             <div className="form-group mb-0">
