@@ -10,6 +10,7 @@ from config import (
     SEL_FORM_SUMMARY, SEL_FORM_HOURS, SEL_FORM_LINKS, 
     SEL_FORM_LEARNINGS, SEL_FORM_BLOCKERS
 )
+from scraper import extract_entries_from_html, navigate_to_diary
 from utils import wait_for_element, human_delay, take_screenshot, retry_web_action, mark_date_failed, mark_date_success, snapshot
 from ai_generator import generate_diary_content
 
@@ -168,19 +169,42 @@ def submit_diary_entry(driver, entry_data):
         # Hit Save
         try:
             save_btns = driver.find_elements(By.XPATH, "//button[text()='Save' or text()='Submit']")
-            if save_btns:
-                try:
-                    save_btns[0].click()
-                except:
-                    driver.execute_script("arguments[0].click();", save_btns[0])
+            if not save_btns:
+                raise Exception("Could not find Save/Submit button")
+
+            try:
+                save_btns[0].click()
+            except:
+                driver.execute_script("arguments[0].click();", save_btns[0])
         except Exception as e:
             logger.error(f"Save button error: {e}")
             raise
 
-        human_delay(3.0, 5.0)
-        logger.info(f"Successfully submitted entry for {date_str}.")
-        mark_date_success(date_str)
-        
+        human_delay(4.0, 6.0)
+
+        # --- VERIFY submission (check that the entry shows updated summary) ---
+        try:
+            navigate_to_diary(driver)
+            page_entries = extract_entries_from_html(driver.page_source)
+            matching = [e for e in page_entries if e.get('date') == date_str]
+            if matching:
+                current_summary = matching[0].get('work_summary', '').strip()
+                intended_summary = work_summary.strip()
+                if intended_summary and intended_summary not in current_summary:
+                    raise Exception(f"Submitted summary did not persist (expected: {intended_summary[:30]}..., got: {current_summary[:30]}...)" )
+            else:
+                raise Exception(f"No diary entry found for {date_str} after submission")
+
+            logger.info(f"Successfully submitted entry for {date_str}.")
+            mark_date_success(date_str)
+        except Exception as e:
+            logger.error(f"Verification failed after submit for {date_str}: {e}")
+            take_screenshot(driver, prefix=f"submit_verify_{date_str}")
+            with open("/tmp/failed_step2.html", "w") as f:
+                f.write(driver.page_source)
+            mark_date_failed(date_str)
+            raise
+
     except Exception as e:
         logger.error(f"Failed submission for {date_str}: {e}")
         take_screenshot(driver, prefix=f"submit_{date_str}")
