@@ -51,3 +51,7 @@ class CheckoutResponse(BaseModel):
     message: str
     amount_paid: float
     entries_added: int
+    # Razorpay fields (optional; returned when payment provider is configured)
+    order_id: Optional[str] = None
+    key_id: Optional[str] = None
+    currency: Optional[str] = None

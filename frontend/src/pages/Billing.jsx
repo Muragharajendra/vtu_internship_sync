@@ -54,7 +54,38 @@ export default function Billing() {
         return basePrice;
     };
 
-    const initiateCheckout = (planId, basePrice) => {
+    const loadRazorpayScript = () => {
+        return new Promise((resolve, reject) => {
+            if (window.Razorpay) {
+                return resolve(true);
+            }
+            const script = document.createElement('script');
+            script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+            script.onload = () => resolve(true);
+            script.onerror = () => reject(new Error('Razorpay script failed to load'));
+            document.body.appendChild(script);
+        });
+    };
+
+    const verifyRazorpayPayment = async (payload) => {
+        setLoading(true);
+        setError('');
+
+        try {
+            const res = await api.post('/checkout/verify', payload);
+            alert(`Success! Added ${res.data.entries_added} entries to your account.`);
+            setCouponCode('');
+            setActiveCoupon(null);
+            setShowPaymentModal(false);
+            fetchUser();
+        } catch (err) {
+            setError(err.response?.data?.detail || 'Payment verification failed');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const initiateCheckout = async (planId, basePrice) => {
         const finalPrice = calculateDiscountedPrice(basePrice);
 
         if (finalPrice <= 0) {
@@ -62,9 +93,50 @@ export default function Billing() {
             return;
         }
 
-        setSelectedPlanId(planId);
-        setPaymentAmount(finalPrice);
-        setShowPaymentModal(true);
+        setLoading(true);
+        setError('');
+
+        try {
+            const res = await api.post('/checkout', { plan_id: planId, coupon: activeCoupon || '' });
+
+            // If backend returned Razorpay order info, open Razorpay checkout modal
+            if (res.data.order_id && res.data.key_id) {
+                await loadRazorpayScript();
+
+                const options = {
+                    key: res.data.key_id,
+                    amount: Math.round(finalPrice * 100),
+                    currency: res.data.currency || 'INR',
+                    name: 'VTU Auto Sync',
+                    description: `Payment for ${planId}`,
+                    order_id: res.data.order_id,
+                    handler: (response) => {
+                        verifyRazorpayPayment(response);
+                    },
+                    prefill: {
+                        email: user?.email,
+                    },
+                    theme: {
+                        color: '#4f46e5',
+                    },
+                };
+
+                const rzp = new window.Razorpay(options);
+                rzp.open();
+
+                return;
+            }
+
+            // Fallback to manual UPI flow
+            setSelectedPlanId(planId);
+            setPaymentAmount(finalPrice);
+            setShowPaymentModal(true);
+        } catch (err) {
+            setError(err.response?.data?.detail || 'Checkout initiation failed');
+            setShowPaymentModal(true);
+        } finally {
+            setLoading(false);
+        }
     };
 
     const executeCheckout = async (planId, overrideUtr = null) => {
