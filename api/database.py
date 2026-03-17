@@ -10,9 +10,17 @@ DEFAULT_SQLITE_URL = f"sqlite:///{DEFAULT_SQLITE_PATH}"
 
 SQLALCHEMY_DATABASE_URL = os.getenv("DATABASE_URL", DEFAULT_SQLITE_URL)
 
-# Ensure the sqlite directory exists (helpful for environments where it might be missing)
+# If the configured sqlite file does not exist, but we have an existing vtu_sync.db, prefer that.
+# This covers environments (e.g. Render/Railway) where DATABASE_URL is set to a different sqlite path.
 if SQLALCHEMY_DATABASE_URL.startswith("sqlite"):
     sqlite_path = SQLALCHEMY_DATABASE_URL.split("///", 1)[1]
+
+    # If the configured file is missing but the default DB exists, use the default.
+    if sqlite_path and not os.path.exists(sqlite_path) and os.path.exists(DEFAULT_SQLITE_PATH):
+        SQLALCHEMY_DATABASE_URL = DEFAULT_SQLITE_URL
+        sqlite_path = DEFAULT_SQLITE_PATH
+
+    # Ensure the sqlite directory exists (helpful for environments where it might be missing)
     sqlite_dir = os.path.dirname(sqlite_path)
     if sqlite_dir and not os.path.exists(sqlite_dir):
         os.makedirs(sqlite_dir, exist_ok=True)

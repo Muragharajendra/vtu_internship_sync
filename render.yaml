@@ -7,7 +7,7 @@ services:
     dockerContext: .
     envVars:
       - key: DATABASE_URL
-        value: sqlite:///./syncapp.db
+        value: sqlite:///./api/vtu_sync.db
       - key: CHROME_BIN
         value: /usr/bin/google-chrome
       - key: CHROMEDRIVER_PATH
