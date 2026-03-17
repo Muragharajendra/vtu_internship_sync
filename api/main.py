@@ -2,6 +2,10 @@ from fastapi import FastAPI, Depends, HTTPException, status, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 from datetime import timedelta
+import os
+
+import razorpay
+
 from database import engine, Base, get_db
 import models
 import schemas
@@ -12,6 +16,13 @@ from sync_runner import start_sync_background
 Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="VTU Sync API")
+
+# Razorpay client setup (used for payments)
+RAZORPAY_KEY_ID = os.getenv("RAZORPAY_KEY_ID")
+RAZORPAY_KEY_SECRET = os.getenv("RAZORPAY_KEY_SECRET")
+razorpay_client = None
+if RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET:
+    razorpay_client = razorpay.Client(auth=(RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET))
 
 app.add_middleware(
     CORSMiddleware,
@@ -60,20 +71,19 @@ def checkout(req: schemas.CheckoutRequest, db: Session = Depends(get_db), curren
     # Pricing
     prices = {"plan_30": 100, "plan_60": 150}
     entries = {"plan_30": 30, "plan_60": 60}
-    
+
     if req.plan_id not in prices:
         raise HTTPException(status_code=400, detail="Invalid plan")
-        
+
     base_price = prices[req.plan_id]
     entry_count = entries[req.plan_id]
-    
+
     final_price = base_price
-    
+
     # Coupons & Freetrial
     if req.coupon == "FREETRIAL":
         if current_user.has_used_freetrial:
             raise HTTPException(status_code=400, detail="FREETRIAL has already been used on this account.")
-        # Freetrial overrides the plan entirely
         final_price = 0
         entry_count = 2
         current_user.has_used_freetrial = True
@@ -81,30 +91,104 @@ def checkout(req: schemas.CheckoutRequest, db: Session = Depends(get_db), curren
         final_price = base_price * 0.90
     elif req.coupon:
         raise HTTPException(status_code=400, detail="Invalid coupon code")
-        
-    # PAYMENT GATEWAY / UTR Validation
-    # We require a 12-digit UTR for any order that has a cost.
-    if final_price > 0:
-        if not req.utr or not req.utr.isdigit() or len(req.utr) != 12:
-            raise HTTPException(status_code=400, detail="A valid 12-digit UPI Transaction Reference (UTR) is required.")
 
+    # If the order is free, just apply it.
+    if final_price == 0:
+        payment = models.Payment(
+            user_id=current_user.id,
+            amount=0,
+            entries_added=entry_count,
+            coupon_used=req.coupon,
+            status="completed"
+        )
+        db.add(payment)
+        current_user.entries_remaining += entry_count
+        db.commit()
+
+        return {
+            "success": True,
+            "message": "Payment successful",
+            "amount_paid": 0,
+            "entries_added": entry_count
+        }
+
+    # Otherwise, create a Razorpay order and return order info for checkout.
+    if razorpay_client is None:
+        raise HTTPException(status_code=500, detail="Payment provider not configured")
+
+    order_amount = int(final_price * 100)  # Razorpay uses paise
+    try:
+        razorpay_order = razorpay_client.order.create({
+            "amount": order_amount,
+            "currency": "INR",
+            "receipt": f"vtusync_{current_user.id}_{int(time.time())}" ,
+            "payment_capture": 1
+        })
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to create payment order: {e}")
+
+    # Store a pending payment record, to be completed once checkout succeeds.
     payment = models.Payment(
         user_id=current_user.id,
         amount=final_price,
         entries_added=entry_count,
-        coupon_used=req.coupon
+        coupon_used=req.coupon,
+        order_id=razorpay_order.get('id'),
+        status="pending",
     )
     db.add(payment)
-    
-    current_user.entries_remaining += entry_count
     db.commit()
-    
+
     return {
-        "success": True, 
-        "message": "Payment successful", 
+        "success": True,
+        "message": "Checkout initialized",
         "amount_paid": final_price,
-        "entries_added": entry_count
+        "entries_added": entry_count,
+        "order_id": razorpay_order.get("id"),
+        "key_id": RAZORPAY_KEY_ID,
+        "currency": "INR"
     }
+
+
+@app.post("/checkout/verify")
+def verify_checkout(payload: dict, db: Session = Depends(get_db), current_user: models.User = Depends(auth.get_current_user)):
+    # Expected payload: razorpay_payment_id, razorpay_order_id, razorpay_signature
+    if razorpay_client is None:
+        raise HTTPException(status_code=500, detail="Payment provider not configured")
+
+    payment_id = payload.get("razorpay_payment_id")
+    order_id = payload.get("razorpay_order_id")
+    signature = payload.get("razorpay_signature")
+
+    if not payment_id or not order_id or not signature:
+        raise HTTPException(status_code=400, detail="Missing payment verification fields")
+
+    try:
+        razorpay_client.utility.verify_payment_signature({
+            "razorpay_order_id": order_id,
+            "razorpay_payment_id": payment_id,
+            "razorpay_signature": signature
+        })
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Payment verification failed: {e}")
+
+    # Find pending payment record
+    payment = db.query(models.Payment).filter(
+        models.Payment.user_id == current_user.id,
+        models.Payment.status == "pending",
+        models.Payment.order_id == order_id
+    ).first()
+
+    if not payment:
+        raise HTTPException(status_code=404, detail="No pending payment found for this order")
+
+    payment.status = "completed"
+    payment.payment_id = payment_id
+
+    current_user.entries_remaining += payment.entries_added
+    db.commit()
+
+    return {"success": True, "message": "Payment verified and entries added", "entries_added": payment.entries_added}
 
 @app.post("/start-sync")
 def start_sync(req: schemas.SyncRequest, background_tasks: BackgroundTasks, db: Session = Depends(get_db), current_user: models.User = Depends(auth.get_current_user)):

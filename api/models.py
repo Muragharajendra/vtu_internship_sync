@@ -36,6 +36,8 @@ class Payment(Base):
     amount = Column(Float)
     entries_added = Column(Integer)
     coupon_used = Column(String, nullable=True)
+    order_id = Column(String, nullable=True)
+    payment_id = Column(String, nullable=True)
     status = Column(String, default="completed")
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
 
