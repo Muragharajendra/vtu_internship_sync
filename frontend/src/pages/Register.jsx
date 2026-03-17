@@ -36,7 +36,7 @@ export default function Register() {
                         <UserPlus size={32} color="var(--primary)" />
                     </div>
                     <h2>Create Account</h2>
-                    <p>Get started with OneTouch</p>
+                    <p>Get started with DairySync</p>
                 </div>
 
                 <form onSubmit={handleRegister}>

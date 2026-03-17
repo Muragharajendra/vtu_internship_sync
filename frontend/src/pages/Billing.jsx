@@ -107,7 +107,7 @@ export default function Billing() {
                     key: res.data.key_id,
                     amount: Math.round(finalPrice * 100),
                     currency: res.data.currency || 'INR',
-                    name: 'OneTouch',
+                    name: 'DairySync',
                     description: `Payment for ${planId}`,
                     order_id: res.data.order_id,
                     handler: (response) => {
@@ -166,8 +166,8 @@ export default function Billing() {
 
     // Generate UPI URI
     const upiId = "muragharajendra@oksbi";
-    const upiName = "OneTouch";
-    const upiUri = `upi://pay?pa=${upiId}&pn=${encodeURIComponent(upiName)}&am=${paymentAmount}&cu=INR&tn=${encodeURIComponent(`OneTouch Plan ${selectedPlanId}`)}`;
+    const upiName = "DairySync";
+    const upiUri = `upi://pay?pa=${upiId}&pn=${encodeURIComponent(upiName)}&am=${paymentAmount}&cu=INR&tn=${encodeURIComponent(`DairySync Plan ${selectedPlanId}`)}`;
 
     return (
         <div className="app-container">

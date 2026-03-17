@@ -72,7 +72,7 @@ export default function Dashboard() {
             <nav className="navbar">
                 <div className="nav-brand">
                     <Activity size={24} color="var(--primary)" />
-                    OneTouch
+                    DairySync
                 </div>
                 <div className="nav-links">
                     <Link to="/dashboard" className={location.pathname === '/dashboard' ? 'active-nav' : 'text-muted'}>Dashboard</Link>
