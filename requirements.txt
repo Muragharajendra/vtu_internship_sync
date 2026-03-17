@@ -11,3 +11,4 @@ razorpay>=1.4.0
 sqlalchemy>=2.0.0
 python-jose[cryptography]>=3.3.0
 passlib[bcrypt]>=1.7.4
+authlib>=1.2.0
