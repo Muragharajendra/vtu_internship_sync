@@ -1,9 +1,16 @@
+import os
+import sys
+from datetime import timedelta
+
+# Ensure the project root is on sys.path so 'api' is importable when running from /app/api
+ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+if ROOT_DIR not in sys.path:
+    sys.path.insert(0, ROOT_DIR)
+
 from fastapi import FastAPI, Depends, HTTPException, status, BackgroundTasks, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
-from datetime import timedelta
-import os
 import time
 
 from authlib.integrations.starlette_client import OAuth, OAuthError
