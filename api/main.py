@@ -1,22 +1,41 @@
-from fastapi import FastAPI, Depends, HTTPException, status, BackgroundTasks
+from fastapi import FastAPI, Depends, HTTPException, status, BackgroundTasks, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
 from datetime import timedelta
 import os
 import time
 
+from authlib.integrations.starlette_client import OAuth, OAuthError
 import razorpay
 
-from database import engine, Base, get_db
-import models
-import schemas
-import auth
-from sync_runner import start_sync_background
+from .database import engine, Base, get_db
+from . import models
+from . import schemas
+from . import auth
+from .sync_runner import start_sync_background
 
 
 Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="VTU Sync API")
+
+# OAuth (Google) for social login
+GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
+GOOGLE_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET")
+FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:5173")
+
+oauth = OAuth()
+if GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET:
+    oauth.register(
+        name="google",
+        client_id=GOOGLE_CLIENT_ID,
+        client_secret=GOOGLE_CLIENT_SECRET,
+        server_metadata_url="https://accounts.google.com/.well-known/openid-configuration",
+        client_kwargs={"scope": "openid email profile"},
+    )
+else:
+    oauth = None
 
 # Razorpay client setup (used for payments)
 RAZORPAY_KEY_ID = os.getenv("RAZORPAY_KEY_ID")
@@ -36,6 +55,51 @@ app.add_middleware(
 @app.get("/", tags=["health"])
 def root():
     return {"message": "VTU Sync API is running", "docs": "/docs"}
+
+@app.get("/auth/google/login")
+def google_login():
+    """Redirect user to Google's OAuth consent screen."""
+    if oauth is None:
+        raise HTTPException(status_code=500, detail="Google OAuth not configured")
+
+    redirect_uri = os.getenv("GOOGLE_REDIRECT_URI", "http://localhost:8000/auth/google/callback")
+    return oauth.google.authorize_redirect(redirect_uri)
+
+@app.get("/auth/google/callback")
+async def google_callback(request: Request, db: Session = Depends(get_db)):
+    """Handle callback from Google OAuth and issue a JWT token."""
+    if oauth is None:
+        raise HTTPException(status_code=500, detail="Google OAuth not configured")
+
+    try:
+        token = await oauth.google.authorize_access_token(request)
+        user_info = await oauth.google.parse_id_token(request, token)
+    except OAuthError as e:
+        raise HTTPException(status_code=400, detail=f"OAuth error: {e}")
+
+    email = user_info.get("email")
+    if not email:
+        raise HTTPException(status_code=400, detail="Google did not return an email")
+
+    # Create user if it doesn't exist
+    db_user = db.query(models.User).filter(models.User.email == email).first()
+    if not db_user:
+        db_user = models.User(
+            email=email,
+            hashed_password=auth.get_password_hash(os.urandom(16).hex()),
+            entries_remaining=0,
+        )
+        db.add(db_user)
+        db.commit()
+        db.refresh(db_user)
+
+    access_token_expires = timedelta(minutes=auth.ACCESS_TOKEN_EXPIRE_MINUTES)
+    access_token = auth.create_access_token(
+        data={"sub": db_user.email}, expires_delta=access_token_expires
+    )
+
+    redirect_url = f"{FRONTEND_URL}/?token={access_token}"
+    return RedirectResponse(redirect_url)
 
 @app.post("/register", response_model=schemas.UserResponse)
 def register(user: schemas.UserCreate, db: Session = Depends(get_db)):
@@ -148,14 +212,25 @@ def checkout(req: schemas.CheckoutRequest, db: Session = Depends(get_db), curren
 
     # Otherwise, create a Razorpay order and return order info for checkout.
     if razorpay_client is None:
-        raise HTTPException(status_code=500, detail="Payment provider not configured")
+        # Razorpay not configured (common in local/dev). Return a response that will
+        # allow the frontend to fall back to the manual UPI payment form.
+        return {
+            "success": True,
+            "message": "Payment provider not configured. Use UPI to pay.",
+            "amount_paid": final_price,
+            "entries_added": entry_count,
+            # Omitting order_id/key_id will cause the frontend to show UPI fallback
+            "order_id": None,
+            "key_id": None,
+            "currency": "INR",
+        }
 
     order_amount = int(final_price * 100)  # Razorpay uses paise
     try:
         razorpay_order = razorpay_client.order.create({
             "amount": order_amount,
             "currency": "INR",
-            "receipt": f"vtusync_{current_user.id}_{int(time.time())}" ,
+            "receipt": f"vtusync_{current_user.id}_{int(time.time())}",
             "payment_capture": 1
         })
     except Exception as e:
