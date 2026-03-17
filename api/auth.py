@@ -6,14 +6,10 @@ import hashlib
 import os
 import binascii
 
-try:
-    from passlib.context import CryptContext
-    pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-    use_bcrypt = True
-except (ImportError, Exception) as e:
-    # Fall back to PBKDF2 if passlib/bcrypt is unavailable or fails
-    use_bcrypt = False
-    pwd_context = None
+# Disable bcrypt due to passlib/bcrypt compatibility issues in some environments
+# Use PBKDF2-SHA256 exclusively for password hashing - it's more reliable
+use_bcrypt = False
+pwd_context = None
 
 from sqlalchemy.orm import Session
 from fastapi import Depends, HTTPException, status
