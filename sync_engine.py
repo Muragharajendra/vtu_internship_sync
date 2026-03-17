@@ -6,20 +6,34 @@ from submitter import submit_diary_entry
 from login import login, logout, get_driver
 from utils import get_failed_entries_from_checkpoint
 
+def _parse_date_string(date_str):
+    """Attempts to parse a date string using common formats."""
+    for fmt in ("%Y-%m-%d", "%d/%m/%Y", "%m/%d/%Y", "%d-%m-%Y", "%m-%d-%Y"):
+        try:
+            return datetime.strptime(date_str, fmt)
+        except Exception:
+            continue
+    # As a last resort, try ISO parsing if the string is in an unexpected but standard form
+    try:
+        return datetime.fromisoformat(date_str)
+    except Exception:
+        raise ValueError(f"Unsupported date format: {date_str}")
+
+
 def filter_by_date(entries, cutoff_date="2026-02-03"):
-    """
-    Returns only entries situated on or after the cutoff date.
-    Assumes entries have 'date' in YYYY-MM-DD format.
-    """
+    """Returns only entries on or after the cutoff date."""
     filtered = []
-    cutoff = datetime.strptime(cutoff_date, "%Y-%m-%d")
+    cutoff = _parse_date_string(cutoff_date)
+    logger.info(f"Filtering entries starting from: {cutoff.date()}")
     for e in entries:
         try:
-            entry_dt = datetime.strptime(e['date'], "%Y-%m-%d")
+            entry_dt = _parse_date_string(e['date'])
             if entry_dt >= cutoff:
                 filtered.append(e)
+            else:
+                logger.debug(f"Skipping entry before cutoff: {e['date']}")
         except Exception as exc:
-            logger.warning(f"Could not parse date {e['date']} for filtering: {exc}")
+            logger.warning(f"Could not parse date {e.get('date')} for filtering: {exc}")
     return filtered
 
 def compute_missing_entries(entries_a2, entries_a1, overwrite=False):
