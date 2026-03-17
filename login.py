@@ -73,6 +73,14 @@ def login(driver, url, username, password):
                 break
                 
         human_delay(2.0, 3.0)
+
+        # Confirm we are no longer on the login page.
+        current_url = driver.current_url
+        if "sign-in" in current_url or "login" in current_url:
+            logger.error("Login did not complete; still on login page.")
+            take_screenshot(driver, "login_failed")
+            raise Exception("Login failed: invalid credentials or login flow changed.")
+
         logger.info("Successfully authenticated.")
         snapshot(driver)
         
