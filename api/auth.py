@@ -28,10 +28,16 @@ if has_passlib:
     pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
     def verify_password(plain_password, hashed_password):
-        return pwd_context.verify(plain_password, hashed_password)
+        # bcrypt only supports up to 72 bytes
+        if len(plain_password.encode()) > 72:
+            return False
+        return pwd_context.verify(plain_password[:72], hashed_password)
 
     def get_password_hash(password):
-        return pwd_context.hash(password)
+        # bcrypt only supports up to 72 bytes
+        if len(password.encode()) > 72:
+            raise ValueError("Password cannot be longer than 72 bytes. Please use a shorter password.")
+        return pwd_context.hash(password[:72])
 else:
     # Fallback hashing when passlib isn't installed (e.g. minimal env). Uses PBKDF2-SHA256.
     PBKDF2_ITERATIONS = 200_000
