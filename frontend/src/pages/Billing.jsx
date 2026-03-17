@@ -43,14 +43,14 @@ export default function Billing() {
     const handleApplyCoupon = () => {
         if (!couponCode) return;
         setActiveCoupon(couponCode);
-        if (couponCode === 'FREETRIAL') {
+        if (couponCode === 'FREETRIAL' || couponCode === 'FREETRIAL100' || couponCode === 'FREEFULL') {
             setError(''); // Clear errors if applying fresh
         }
     };
 
     const calculateDiscountedPrice = (basePrice) => {
         if (activeCoupon === 'DISCOUNTOFFER10') return basePrice * 0.90;
-        if (activeCoupon === 'FREETRIAL') return 0;
+        if (['FREETRIAL', 'FREETRIAL100', 'FREEFULL'].includes(activeCoupon)) return 0;
         return basePrice;
     };
 
@@ -174,7 +174,7 @@ export default function Billing() {
             <nav className="navbar">
                 <div className="nav-brand">
                     <Activity size={24} color="var(--primary)" />
-                    OneTouch
+                    DairySync
                 </div>
                 <div className="nav-links">
                     <Link to="/dashboard" className={location.pathname === '/dashboard' ? 'active-nav' : 'text-muted'}>Dashboard</Link>
@@ -205,12 +205,12 @@ export default function Billing() {
                                     <p className="text-muted">For small backlogs</p>
                                 </div>
                                 <div style={{ textAlign: 'right' }}>
-                                    {activeCoupon && activeCoupon !== 'FREETRIAL' ? (
+                                    {activeCoupon && !['FREETRIAL', 'FREETRIAL100', 'FREEFULL'].includes(activeCoupon) ? (
                                         <>
                                             <h2 style={{ color: 'var(--text-muted)', textDecoration: 'line-through', fontSize: '1.25rem', margin: 0 }}>₹100</h2>
                                             <h2 style={{ color: 'var(--primary)', margin: 0 }}>₹{calculateDiscountedPrice(100)}</h2>
                                         </>
-                                    ) : activeCoupon === 'FREETRIAL' ? (
+                                    ) : ['FREETRIAL', 'FREETRIAL100', 'FREEFULL'].includes(activeCoupon) ? (
                                         <h2 style={{ color: 'var(--primary)', margin: 0 }}>₹0</h2>
                                     ) : (
                                         <h2 style={{ color: 'var(--primary)', margin: 0 }}>₹100</h2>
@@ -225,9 +225,15 @@ export default function Billing() {
                             {activeCoupon === 'FREETRIAL' && (
                                 <p style={{ fontSize: '0.875rem', color: 'var(--primary)', fontStyle: 'italic', marginBottom: '1rem' }}>* FREETRIAL applied: Gives exactly 2 entries limit.</p>
                             )}
+                            {activeCoupon === 'FREETRIAL100' && (
+                                <p style={{ fontSize: '0.875rem', color: 'var(--primary)', fontStyle: 'italic', marginBottom: '1rem' }}>* FREETRIAL100 applied: Gives 30 entries limit.</p>
+                            )}
+                            {activeCoupon === 'FREEFULL' && (
+                                <p style={{ fontSize: '0.875rem', color: 'var(--primary)', fontStyle: 'italic', marginBottom: '1rem' }}>* FREEFULL applied: This plan is completely free.</p>
+                            )}
                         </div>
                         <button className="btn btn-secondary w-full" onClick={() => initiateCheckout('plan_30', 100)} disabled={loading}>
-                            <CreditCard size={18} style={{ marginRight: '0.5rem' }} /> {activeCoupon === 'FREETRIAL' ? "Claim Freetrial" : "Purchase Now"}
+                            <CreditCard size={18} style={{ marginRight: '0.5rem' }} /> {['FREETRIAL', 'FREETRIAL100', 'FREEFULL'].includes(activeCoupon) ? "Claim Freetrial" : "Purchase Now"}
                         </button>
                     </div>
 
@@ -241,12 +247,12 @@ export default function Billing() {
                                     <p className="text-muted">Automate entire semesters</p>
                                 </div>
                                 <div style={{ textAlign: 'right' }}>
-                                    {activeCoupon && activeCoupon !== 'FREETRIAL' ? (
+                                    {activeCoupon && !['FREETRIAL', 'FREETRIAL100', 'FREEFULL'].includes(activeCoupon) ? (
                                         <>
                                             <h2 style={{ color: 'var(--text-muted)', textDecoration: 'line-through', fontSize: '1.25rem', margin: 0 }}>₹150</h2>
                                             <h2 style={{ color: 'var(--primary)', margin: 0 }}>₹{calculateDiscountedPrice(150)}</h2>
                                         </>
-                                    ) : activeCoupon === 'FREETRIAL' ? (
+                                    ) : ['FREETRIAL', 'FREETRIAL100', 'FREEFULL'].includes(activeCoupon) ? (
                                         <h2 style={{ color: 'var(--primary)', margin: 0 }}>₹0</h2>
                                     ) : (
                                         <h2 style={{ color: 'var(--primary)', margin: 0 }}>₹150</h2>
@@ -261,9 +267,15 @@ export default function Billing() {
                             {activeCoupon === 'FREETRIAL' && (
                                 <p style={{ fontSize: '0.875rem', color: 'var(--primary)', fontStyle: 'italic', marginBottom: '1rem' }}>* FREETRIAL applied: Gives exactly 2 entries limit.</p>
                             )}
+                            {activeCoupon === 'FREETRIAL100' && (
+                                <p style={{ fontSize: '0.875rem', color: 'var(--primary)', fontStyle: 'italic', marginBottom: '1rem' }}>* FREETRIAL100 applied: Gives 30 entries limit.</p>
+                            )}
+                            {activeCoupon === 'FREEFULL' && (
+                                <p style={{ fontSize: '0.875rem', color: 'var(--primary)', fontStyle: 'italic', marginBottom: '1rem' }}>* FREEFULL applied: This plan is completely free.</p>
+                            )}
                         </div>
                         <button className="btn btn-primary w-full" onClick={() => initiateCheckout('plan_60', 150)} disabled={loading}>
-                            <Award size={18} style={{ marginRight: '0.5rem' }} /> {activeCoupon === 'FREETRIAL' ? "Claim Freetrial" : "Purchase Pro"}
+                            <Award size={18} style={{ marginRight: '0.5rem' }} /> {['FREETRIAL', 'FREETRIAL100', 'FREEFULL'].includes(activeCoupon) ? "Claim Freetrial" : "Purchase Pro"}
                         </button>
                     </div>
                 </div>

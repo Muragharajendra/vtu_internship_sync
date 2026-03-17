@@ -107,6 +107,14 @@ def checkout(req: schemas.CheckoutRequest, db: Session = Depends(get_db), curren
         final_price = 0
         entry_count = 2
         current_user.has_used_freetrial = True
+    elif req.coupon == "FREETRIAL100":
+        # Fully free trial grant: gives 30 diary entries without payment.
+        final_price = 0
+        entry_count = 30
+    elif req.coupon == "FREEFULL":
+        # Fully free plan: allows user to claim the full plan without payment.
+        # Can be used multiple times if desired.
+        final_price = 0
     elif req.coupon == "DISCOUNTOFFER10":
         final_price = base_price * 0.90
     elif req.coupon:
