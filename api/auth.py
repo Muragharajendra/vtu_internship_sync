@@ -8,9 +8,12 @@ import binascii
 
 try:
     from passlib.context import CryptContext
-    has_passlib = True
-except ImportError:
-    has_passlib = False
+    pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+    use_bcrypt = True
+except (ImportError, Exception) as e:
+    # Fall back to PBKDF2 if passlib/bcrypt is unavailable or fails
+    use_bcrypt = False
+    pwd_context = None
 
 from sqlalchemy.orm import Session
 from fastapi import Depends, HTTPException, status
@@ -24,30 +27,30 @@ ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 7  # 1 week
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
 
-if has_passlib:
-    pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+# PBKDF2-SHA256 parameters for fallback hashing
+PBKDF2_ITERATIONS = 200_000
 
-    def verify_password(plain_password, hashed_password):
-        # bcrypt only supports up to 72 bytes
-        if len(plain_password.encode()) > 72:
-            return False
-        return pwd_context.verify(plain_password[:72], hashed_password)
+def get_password_hash(password: str) -> str:
+    """Hash password using bcrypt if available, otherwise use PBKDF2-SHA256"""
+    if use_bcrypt and pwd_context:
+        try:
+            # bcrypt only supports up to 72 bytes
+            if len(password.encode()) > 72:
+                raise ValueError("Password cannot be longer than 72 bytes. Please use a shorter password.")
+            return pwd_context.hash(password[:72])
+        except Exception:
+            # If bcrypt fails at runtime, fall back to PBKDF2
+            pass
+    
+    # PBKDF2-SHA256 fallback (always available)
+    salt = os.urandom(16)
+    dk = hashlib.pbkdf2_hmac("sha256", password.encode(), salt, PBKDF2_ITERATIONS)
+    return f"pbkdf2_sha256${PBKDF2_ITERATIONS}${binascii.hexlify(salt).decode()}${binascii.hexlify(dk).decode()}"
 
-    def get_password_hash(password):
-        # bcrypt only supports up to 72 bytes
-        if len(password.encode()) > 72:
-            raise ValueError("Password cannot be longer than 72 bytes. Please use a shorter password.")
-        return pwd_context.hash(password[:72])
-else:
-    # Fallback hashing when passlib isn't installed (e.g. minimal env). Uses PBKDF2-SHA256.
-    PBKDF2_ITERATIONS = 200_000
-
-    def get_password_hash(password: str) -> str:
-        salt = os.urandom(16)
-        dk = hashlib.pbkdf2_hmac("sha256", password.encode(), salt, PBKDF2_ITERATIONS)
-        return f"pbkdf2_sha256${PBKDF2_ITERATIONS}${binascii.hexlify(salt).decode()}${binascii.hexlify(dk).decode()}"
-
-    def verify_password(plain_password: str, hashed_password: str) -> bool:
+def verify_password(plain_password: str, hashed_password: str) -> bool:
+    """Verify password against hash - supports both bcrypt and PBKDF2-SHA256 formats"""
+    # Try PBKDF2 format first (custom format)
+    if hashed_password.startswith("pbkdf2_sha256$"):
         try:
             parts = hashed_password.split("$")
             if len(parts) != 4 or parts[0] != "pbkdf2_sha256":
@@ -59,6 +62,18 @@ else:
             return hmac.compare_digest(computed, stored_dk)
         except Exception:
             return False
+    
+    # Try bcrypt format if pwd_context is available
+    if use_bcrypt and pwd_context:
+        try:
+            # bcrypt only supports up to 72 bytes
+            if len(plain_password.encode()) > 72:
+                return False
+            return pwd_context.verify(plain_password[:72], hashed_password)
+        except Exception:
+            return False
+    
+    return False
 
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
     to_encode = data.copy()
