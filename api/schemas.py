@@ -31,6 +31,14 @@ class SyncRequest(BaseModel):
     dest_email: str
     dest_password: str
 
+class PasswordChangeRequest(BaseModel):
+    old_password: str
+    new_password: str
+
+class PasswordResetRequest(BaseModel):
+    email: str
+    new_password: str
+
 class JobResponse(BaseModel):
     id: int
     status: str

@@ -63,6 +63,25 @@ def login(user: schemas.UserCreate, db: Session = Depends(get_db)):
     )
     return {"access_token": access_token, "token_type": "bearer"}
 
+@app.post("/change-password")
+def change_password(req: schemas.PasswordChangeRequest, db: Session = Depends(get_db), current_user: models.User = Depends(auth.get_current_user)):
+    if not auth.verify_password(req.old_password, current_user.hashed_password):
+        raise HTTPException(status_code=400, detail="Current password is incorrect")
+
+    current_user.hashed_password = auth.get_password_hash(req.new_password)
+    db.commit()
+    return {"success": True, "message": "Password changed successfully"}
+
+@app.post("/reset-password")
+def reset_password(req: schemas.PasswordResetRequest, db: Session = Depends(get_db)):
+    db_user = db.query(models.User).filter(models.User.email == req.email).first()
+    if not db_user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    db_user.hashed_password = auth.get_password_hash(req.new_password)
+    db.commit()
+    return {"success": True, "message": "Password reset successful"}
+
 @app.get("/me", response_model=schemas.UserResponse)
 def get_me(current_user: models.User = Depends(auth.get_current_user)):
     return current_user

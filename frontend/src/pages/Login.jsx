@@ -69,6 +69,9 @@ export default function Login() {
                 <p className="text-center mt-4 text-muted">
                     Don't have an account? <Link to="/register">Sign up</Link>
                 </p>
+                <p className="text-center mt-2 text-muted">
+                    Forgot your password? <Link to="/forgot-password">Reset it</Link>
+                </p>
             </div>
         </div>
     );

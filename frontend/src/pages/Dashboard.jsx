@@ -77,6 +77,7 @@ export default function Dashboard() {
                 <div className="nav-links">
                     <Link to="/dashboard" className={location.pathname === '/dashboard' ? 'active-nav' : 'text-muted'}>Dashboard</Link>
                     <Link to="/billing" className={location.pathname === '/billing' ? 'active-nav' : 'text-muted'}>Billing</Link>
+                    <Link to="/change-password" className={location.pathname === '/change-password' ? 'active-nav' : 'text-muted'}>Change Password</Link>
                     <span style={{ marginLeft: '1rem', borderLeft: '1px solid var(--border-color)', paddingLeft: '1rem' }}>{user.email}</span>
                     <button className="btn btn-secondary" onClick={handleLogout} style={{ padding: '0.4rem 1rem' }}>
                         <LogOut size={16} /> <span style={{ marginLeft: '0.5rem' }}>Logout</span>
